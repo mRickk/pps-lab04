@@ -1,6 +1,9 @@
 package tasks.adts
 import u03.extensionmethods.Optionals.*
 import u03.extensionmethods.Sequences.*
+import u03.extensionmethods.Sequences.Sequence.{Cons, nil}
+
+import scala.collection.immutable.Nil.contains
 
 /*  Exercise 2: 
  *  Implement the below trait, and write a meaningful test.
@@ -111,21 +114,32 @@ object SchoolModel:
        */
       def hasCourse(name: String): Boolean
   object BasicSchoolModule extends SchoolModule:
-    override type School = Nothing
-    override type Teacher = Nothing
-    override type Course = Nothing
+    case class SchoolImpl(teachers: Sequence[Teacher], courses: Sequence[Course], teacherToCourse: Sequence[(Teacher, Course)])
+    case class TeacherImpl(name: String)
+    case class CourseImpl(name: String)
 
-    def teacher(name: String): Teacher = ???
-    def course(name: String): Course = ???
-    def emptySchool: School = ???
+    override opaque type School = SchoolImpl
+    override opaque type Teacher = TeacherImpl
+    override opaque type Course = CourseImpl
+
+    def teacher(name: String): Teacher = TeacherImpl(name)
+    def course(name: String): Course = CourseImpl(name)
+    def emptySchool: School = SchoolImpl(nil(), nil(), nil())
 
     extension (school: School)
-      def courses: Sequence[String] = ???
-      def teachers: Sequence[String] = ???
-      def setTeacherToCourse(teacher: Teacher, course: Course): School = ???
-      def coursesOfATeacher(teacher: Teacher): Sequence[Course] = ???
-      def hasTeacher(name: String): Boolean = ???
-      def hasCourse(name: String): Boolean = ???
+      def courses: Sequence[String] = school match
+        case SchoolImpl(_, courses, _) => courses.map { case CourseImpl(name) => name }
+      def teachers: Sequence[String] = school match
+        case SchoolImpl(teachers, _, _) => teachers.map { case TeacherImpl(name) => name }
+      def setTeacherToCourse(teacher: Teacher, course: Course): School = school match
+        case SchoolImpl(t, c, ttc) => SchoolImpl(Cons(teacher, t), Cons(course, c), Cons((teacher, course), ttc))
+      def coursesOfATeacher(teacher: Teacher): Sequence[Course] = school match
+        case SchoolImpl(_, _, ttc) => ttc.filter((t,c) => t.equals(teacher)).map((t,c) => c)
+      def hasTeacher(name: String): Boolean = school match
+        case SchoolImpl(teachers, _, _) => contains(teachers, teacher(name))
+      def hasCourse(name: String): Boolean = school match
+        case SchoolImpl(_, courses, _) => contains(courses, course(name))
+
 @main def examples(): Unit =
   import SchoolModel.BasicSchoolModule.*
   val school = emptySchool
